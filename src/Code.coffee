@@ -431,6 +431,18 @@ function chatPostMessage(channelId, text , option) {
 }
 
 /**
+ * //alias
+ * This method posts a message to a channel.
+ * @param {string} channelId Channel to send message to. Can be a public channel, private group or IM channel. Can be an encoded ID, or a name.
+ * @param {string} text Text of the message to send. See below for an explanation of formatting.
+ * @param {Object} option optional please see https://api.slack.com/methods/chat.postMessage
+ * @return {Object} api result
+ */
+function postMessage(channelId, text , option) {
+    throw new Error("this method should not call direct, please call create method.")
+}
+
+/**
  * This method updates a message in a channel.
  * @param {string} channelId Channel containing the message to be updated.
  * @param {Number} timestamp Timestamp of the message to be updated.
@@ -721,18 +733,15 @@ function getCallbackURL(callback,optArg) {
     throw new Error("this method should not call direct, please call create method.")
 }
 `
-do(exports=@)=>
+do(exports=@)->
     class SlackApp
         constructor : (@team, @clientId, @clientSecret, @scopes,@option={})->
             @BASE_URI="https://slack.com"
             @API_ENDPOINT="#{@BASE_URI}/api/"
             @AUTH_ENDPOINT="#{@BASE_URI}/oauth/authorize"
             @prop = PropertiesService.getUserProperties()
-    
             @option.name = "" if !@option.name
             @prop.setProperty("SLACK_credencial#{@option.name}", JSON.stringify({"access_token" : @option.token})) if @option.token
-    
-    
         apiTest : (params={})=>
             @fetch_("api.test", params)
 
@@ -775,6 +784,9 @@ do(exports=@)=>
 
         chatPostMessage : (channelId, text , option={})=>
             @fetch_("chat.postMessage", _.extend({channel : channelId, text : text}, option))
+
+        postMessage : (channelId, text , option={})=>
+            @chatPostMessage(channelId, text , option)
 
         chatUpdate : (channelId, timestamp, text)=>
             @fetch_("chat.update", {channel : channelId, text : text, ts : timestamp})
@@ -875,12 +887,10 @@ do(exports=@)=>
     
         getCredencial_ : (name)=>
             return @cache[name] if @cache && @cache[name]
-    
             credencial = @prop.getProperty("SLACK_credencial#{@option.name}")
             return null if !credencial?
             @cache = JSON.parse credencial
             return @cache[name]
-        
         # authorize : ()=>
         #     res = @uox => UrlFetchApp.fetch "#{@API_ENDPOINT}/oauth.access" ,
         #         method : "post"
@@ -890,7 +900,6 @@ do(exports=@)=>
         #             scope : @scopes.join(",")
         #     @prop.setProperty("SLACK_credencial#{@option.name}", res.getContentText())
         #     return JSON.parse(res.getContentText()).access_token
-    
         saveAccessToken : (code)=>
             res = @uox => UrlFetchApp.fetch "#{@API_ENDPOINT}oauth.access" ,
                 method : "post"
@@ -901,13 +910,10 @@ do(exports=@)=>
                     code : code
             @prop.setProperty("SLACK_credencial#{@option.name}", res.getContentText())
             return JSON.parse(res.getContentText()).access_token
-    
         getAuthorizeUrl : (callback,optArg) =>
             redirectUri = @getCallbackURL(callback, optArg)
             @prop.setProperty("SLACK_redirectURI#{@option.name}", redirectUri)
             "#{@AUTH_ENDPOINT}?client_id=#{@clientId}&scope=#{@scopes.join(',')}&response_type=code&redirect_uri=#{redirectUri}"
-    
-    
         getCallbackURL : (callback,optArg = {}) ->
             url = ScriptApp.getService().getUrl()
             if url.indexOf("/exec") >= 0
@@ -931,5 +937,4 @@ do(exports=@)=>
                 throw e
               Utilities.sleep 1000
               count++
-
     exports.SlackApp = SlackApp
